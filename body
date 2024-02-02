@@ -1,0 +1,87 @@
+#!/bin/bash
+
+if [ "$#" -lt 1 ]; then
+  echo "Usage: $0 [-B <lines_before>] [-A <lines_after>] [-C <lines_before_and_after>] <filename(s)>"
+  exit 1
+fi
+
+lines_before=5
+lines_after=5
+
+while [[ "$#" -gt 0 ]]; do
+  case $1 in
+    -B*|-B=*)
+      lines_before="${1#-B}"
+      lines_before="${lines_before#=}"
+      if [[ -z "$lines_before" ]]; then
+        if [[ -n "$2" && "$2" =~ [0-9] ]]; then
+          lines_before=$2
+          shift
+        fi
+      fi
+      ;;
+    -A*|-A=*)
+      lines_after="${1#-A}"
+      lines_after="${lines_after#=}"
+      if [[ -z "$lines_after" ]]; then
+        if [[ -n "$2" && "$2" =~ [0-9] ]]; then
+          lines_after=$2
+          shift
+        fi
+      fi
+      ;;
+    -C*|-C=*)
+      lines_before="${1#-C}"
+      lines_before="${lines_before#=}"
+      if [[ -z "$lines_before" ]]; then
+        if [[ -n "$2" && "$2" =~ [0-9] ]]; then
+          lines_before=$2
+          shift
+        fi
+      fi
+      lines_after=$lines_before
+      ;;
+    *)
+      if [[ ! "$1" =~ ^-.* ]]; then
+        filenames+=("$1")
+      else
+        echo "Invalid option: $1" >&2
+        exit 1
+      fi
+      ;;
+  esac
+  shift
+done
+
+num_files="${#filenames[@]}"
+
+if [[ "$num_files" -eq 0 ]]; then
+  echo "No file specified." >&2
+  exit 1
+fi
+
+for filename in "${filenames[@]}"; do
+  if ! [[ -f "$filename" && -r "$filename" ]]; then
+    echo "File does not exist: $filename" 2>&1
+    continue
+  fi
+
+  line_count=$(wc -l < "$filename")
+
+  [[ "$line_count" -gt 0 ]] || continue
+
+  middle_line_start=$((line_count / 2))
+
+  [[ $((middle_line_start % 2)) -eq 0 ]] && ((middle_line_start++)) # todo: make it optional for ++ or --
+  middle_line_end=$((line_count / 2))
+
+  start_line=$((middle_line_start - lines_before))
+  end_line=$((middle_line_end + lines_after))
+
+  [[ "$start_line" -le 0 ]] && start_line=1
+  [[ "$end_line" -gt line_count ]] && end_line=$line_count
+
+  [[ "$num_files" -ne 1 ]] && awk 'NR>='"$start_line"' && NR<='"$end_line"' {print FILENAME ":" NR ":" $0}' "$filename" && continue
+
+  awk 'NR>='"$start_line"' && NR<='"$end_line"' {print NR ":" $0}' "$filename"
+done
