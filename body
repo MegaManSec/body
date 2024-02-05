@@ -16,13 +16,13 @@ fi
 def_lines_before=5
 def_lines_after=5
 
-while [[ "$#" -gt 0 ]]; do
+while [ "$#" -gt 0 ]; do
   case $1 in
     -B*|-B=*)
       lines_before="${1#-B}"
       lines_before="${lines_before#=}"
-      if [[ -z "$lines_before" && -n "$2" ]]; then
-        lines_before=$2
+      if [ -z "$lines_before" ] && [ -n "$2" ]; then
+        lines_before="$2"
         shift
       fi
       if ! is_uint "$lines_before"; then
@@ -34,8 +34,8 @@ while [[ "$#" -gt 0 ]]; do
     -A*|-A=*)
       lines_after="${1#-A}"
       lines_after="${lines_after#=}"
-      if [[ -z "$lines_after" && -n "$2" ]]; then
-        lines_after=$2
+      if [ -z "$lines_after" ] && [ -n "$2" ]; then
+        lines_after="$2"
         shift
       fi
 
@@ -47,8 +47,8 @@ while [[ "$#" -gt 0 ]]; do
     -C*|-C=*)
       lines_before="${1#-C}"
       lines_before="${lines_before#=}"
-      if [[ -z "$lines_before" && -n "$2" ]]; then
-        lines_before=$2
+      if [ -z "$lines_before" ] && [ -n "$2" ]; then
+        lines_before="$2"
         shift
       fi
       lines_after="$lines_before"
@@ -74,21 +74,21 @@ lines_after="${lines_after:-$def_lines_after}"
 
 num_files="${#filenames[@]}"
 
-if [[ "$num_files" -eq 0 ]]; then
+if [ "$num_files" -eq 0 ]; then
   echo "No file(s) specified." >&2
   exit 1
 fi
 
 for filename in "${filenames[@]}"; do
-  if ! [[ -f "$filename" && -r "$filename" ]]; then
-    echo "File does not exist: $filename" >&2
+  if ! [ -f "$filename" ] && [ -r "$filename" ]; then
+#    echo "File does not exist: $filename" >&2
     continue
   fi
 
   line_count=$(wc -l < "$filename" 2>/dev/null)
 
-  if [[ "$line_count" -lt 1 ]]; then
-    echo "File is empty: $filename" >&2
+  if [ "$line_count" -lt 1 ]; then
+#    echo "File is empty: $filename" >&2
     continue
   fi
 
@@ -97,10 +97,10 @@ for filename in "${filenames[@]}"; do
   start_line=$((middle_line - lines_before))
   end_line=$((middle_line + lines_after))
 
-  [[ "$start_line" -le 0 ]] && start_line=1
-  [[ "$end_line" -gt line_count ]] && end_line=$line_count
+  [ "$start_line" -le 0 ] && start_line=1
+  [ "$end_line" -gt $line_count ] && end_line=$line_count
 
-  [[ "$num_files" -ne 1 ]] && awk 'NR>='"$start_line"' && NR<='"$end_line"' {print FILENAME ":" NR ":" $0}' "$filename" 2>/dev/null && continue
+  [ "$num_files" -ne 1 ] && awk 'NR>='"$start_line"' && NR<='"$end_line"' {print FILENAME ":" NR ":" $0}' "$filename" 2>/dev/null && continue
 
   awk 'NR>='"$start_line"' && NR<='"$end_line"' {print NR ":" $0}' "$filename" 2>/dev/null
 done
