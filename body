@@ -81,7 +81,7 @@ if [ "$num_files" -eq 0 ]; then
 fi
 
 for filename in "${filenames[@]}"; do
-  if ! [ -f "$filename" ] && [ -r "$filename" ]; then
+  if ! [ -f "$filename" ] || ! [ -r "$filename" ]; then
 #    echo "File does not exist: $filename" >&2
     continue
   fi
