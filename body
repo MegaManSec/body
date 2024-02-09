@@ -101,7 +101,8 @@ for filename in "${filenames[@]}"; do
   [ "$start_line" -le 0 ] && start_line=1
   [ "$end_line" -gt $line_count ] && end_line=$line_count
 
-  [ "$num_files" -ne 1 ] && awk 'NR>='"$start_line"' && NR<='"$end_line"' {print FILENAME ":" NR ":" $0}' "$filename" 2>/dev/null && continue
+  [ "$num_files" -ne 1 ] && sed "$start_line,$end_line"'!d;=' "$filename" | sed 'N;s/\n/:/' && continue
 
-  awk 'NR>='"$start_line"' && NR<='"$end_line"' {print NR ":" $0}' "$filename" 2>/dev/null
+  sed "$start_line,$end_line"'!d;=' "$filename" | sed 'N;s/\n/:/' | sed "s|^|$filename:|"
+
 done
