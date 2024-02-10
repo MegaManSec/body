@@ -10,10 +10,12 @@ is_uint() {
 }
 
 if [ "$#" -lt 1 ]; then
-  echo "Usage: $0 [-B <lines_before>] [-A <lines_after>] [-C <lines_before_and_after>] <filename(s)>"
+  echo "Usage: $0 [-B <lines_before>] [-A <lines_after>] [-C <lines_before_and_after>] [-n] [-N] <filename(s)>"
   exit 1
 fi
 
+no_files=0
+no_lines=0
 def_lines_before=0
 def_lines_after=0
 
@@ -58,9 +60,15 @@ while [ "$#" -gt 0 ]; do
         exit 1
       fi
       ;;
+    -n)
+      no_lines=1
+      ;;
+    -N)
+      no_files=1
+      ;;
     *)
       if [[ ! "$1" =~ ^-.* ]]; then
-        filenames+=("$1") #["$1"]=1
+        filenames+=("$(readlink -f -- "$1")") #["$1"]=1
       else
         echo "Invalid option: $1" >&2
         exit 1
@@ -101,8 +109,22 @@ for filename in "${filenames[@]}"; do
   [ "$start_line" -le 0 ] && start_line=1
   [ "$end_line" -gt $line_count ] && end_line=$line_count
 
-  [ "$num_files" -ne 1 ] && sed "$start_line,$end_line"'!d;=' "$filename" | sed 'N;s/\n/:/' && continue
+  if [ "$no_lines" -eq 1 ]; then
+    if [ "$no_files" -eq 1 ]; then
+      [ "$num_files" -ne 1 ] && sed -n "$start_line,${end_line}p" "$filename"  && continue
+    else
+      [ "$num_files" -ne 1 ] && sed -n "$start_line,${end_line}p" "$filename" | sed "s|^|$filename:|" && continue
+    fi
 
-  sed "$start_line,$end_line"'!d;=' "$filename" | sed 'N;s/\n/:/' | sed "s|^|$filename:|"
+    sed -n "$start_line,${end_line}p" "$filename"
+  else
+    if [ "$no_files" -eq 1 ]; then
+      [ "$num_files" -ne 1 ] && sed "$start_line,$end_line"'!d;=' "$filename" | sed 'N;s/\n/:/' && continue
+    else
+      [ "$num_files" -ne 1 ] && sed "$start_line,$end_line"'!d;=' "$filename" | sed 'N;s/\n/:/' | sed "s|^|$filename:|" && continue
+    fi
+
+    sed "$start_line,$end_line"'!d;=' "$filename" | sed 'N;s/\n/:/'
+  fi
 
 done

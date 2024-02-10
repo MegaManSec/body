@@ -1,4 +1,7 @@
-body: print the middle line(s) of files.
+_body_: print the middle line(s) of files.
+
+
+`body [-B <lines_before>] [-A <lines_after>] [-C <lines_before_and_after>] [-n] [-N] <filename(s)>`
 
 parameters:
 
@@ -8,15 +11,22 @@ parameters:
 
 -C[number]: print _number_ lines before and after the middle line.
 
-filename: file to parse. can be specified multiple times.
+-n: do not print the line number(s), just print the contents of the line(s).
+
+-N: do not print the file name (only utilized if multiple files filenames are specified).
+
+filename: file to parse. can be specified multiple times. if multiple files are specified, the file name is also printed.
+
+by default, only the middle line is shown.
 
 examples:
 
-$ body /etc/passwd /etc/group 
+```bash
+$ body /etc/passwd /etc/group
 /etc/passwd:65:_dpaudio:*:215:215:DP Audio:/var/empty:/usr/bin/false
 /etc/group:79:_atsserver:*:97:
 
-$ body -A3 -B1 /etc/passwd  /etc/group 
+$ body -A3 -B1 /etc/passwd  /etc/group
 /etc/passwd:64:_dovecot:*:214:6:Dovecot Administrator:/var/empty:/usr/bin/false
 /etc/passwd:65:_dpaudio:*:215:215:DP Audio:/var/empty:/usr/bin/false
 /etc/passwd:66:_postgres:*:216:216:PostgreSQL Server:/var/empty:/usr/bin/false
@@ -32,7 +42,7 @@ $ body -C1 /etc/passwd
 64:_dovecot:*:214:6:Dovecot Administrator:/var/empty:/usr/bin/false
 65:_dpaudio:*:215:215:DP Audio:/var/empty:/usr/bin/false
 66:_postgres:*:216:216:PostgreSQL Server:/var/empty:/usr/bin/false
-
+```
 
 ---
 
@@ -100,4 +110,10 @@ previously, the script used:
 
 ```bash
 awk 'NR>='"$start_line"' && NR<='"$end_line"' {print NR ":" $0}' "$filename" 2>/dev/null
+```
+
+now it uss:
+
+```bash
+sed "$start_line,$end_line"'!d;=' "$filename" | sed 'N;s/\n/:/' | sed "s|^|$filename:|"
 ```
