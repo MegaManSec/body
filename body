@@ -21,7 +21,7 @@ def_lines_after=0
 
 while [ "$#" -gt 0 ]; do
   case $1 in
-    -B*|-B=*)
+    -B*)
       lines_before="${1#-B}"
       lines_before="${lines_before#=}"
       if [ -z "$lines_before" ] && [ -n "$2" ]; then
@@ -34,7 +34,7 @@ while [ "$#" -gt 0 ]; do
       fi
 
       ;;
-    -A*|-A=*)
+    -A*)
       lines_after="${1#-A}"
       lines_after="${lines_after#=}"
       if [ -z "$lines_after" ] && [ -n "$2" ]; then
@@ -47,7 +47,7 @@ while [ "$#" -gt 0 ]; do
         exit 1
       fi
       ;;
-    -C*|-C=*)
+    -C*)
       lines_before="${1#-C}"
       lines_before="${lines_before#=}"
       if [ -z "$lines_before" ] && [ -n "$2" ]; then
