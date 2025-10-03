@@ -1,19 +1,21 @@
 _body_: print the middle line(s) of files.
 
 
-`body [-B <lines_before>] [-A <lines_after>] [-C <lines_before_and_after>] [-n] [-N] <filename(s)>`
+`body [-A <lines_after>] [-B <lines_before>] [-C <lines_before_and_after>] [--color=WHEN] [-n] [-N] <filename(s)>`
 
 parameters:
 
--B[number]: print _number_ lines before the middle line.
-
 -A[number]: print _number_ lines after the middle line.
+
+-B[number]: print _number_ lines before the middle line.
 
 -C[number]: print _number_ lines before and after the middle line.
 
 -n: do not print the line number(s), just print the contents of the line(s).
 
 -N: do not print the file name (only utilized if multiple files filenames are specified).
+
+--color=WHEN: `always`, `never`, or `auto` use colors in output.
 
 filename: file to parse. can be specified multiple times. if multiple files are specified, the file name is also printed.
 
@@ -47,7 +49,6 @@ $ body -C1 /etc/passwd
 ---
 
 benchmarks:
-
 
 given the following test file:
 
