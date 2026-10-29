@@ -2,6 +2,7 @@
 #declare -A filenames
 
 export LC_ALL=C
+set -o pipefail
 
 is_uint() {
   case $1 in
@@ -144,13 +145,18 @@ if [ "$num_files" -eq 0 ]; then
   exit 1
 fi
 
+status=0
 for filename in "${filenames[@]}"; do
   if ! [ -f "$filename" ] || ! [ -r "$filename" ]; then
     echo "body: $filename: No such file" >&2
+    status=1
     continue
   fi
 
-  line_count=$(awk 'END { print NR }' < "$filename" 2>/dev/null)
+  if ! line_count=$(awk 'END { print NR }' < "$filename"); then
+    status=1
+    continue
+  fi
 
   if [ "$line_count" -lt 1 ]; then
 #    echo "File is empty: $filename" >&2
@@ -163,7 +169,7 @@ for filename in "${filenames[@]}"; do
   end_line=$((middle_line + lines_after))
 
   [ "$start_line" -le 0 ] && start_line=1
-  [ "$end_line" -gt $line_count ] && end_line=$line_count
+  [ "$end_line" -gt "$line_count" ] && end_line=$line_count
 
   # Escape filenames used as literal sed replacement text.
   escaped_filename=${filename//\\/\\\\}
@@ -171,20 +177,16 @@ for filename in "${filenames[@]}"; do
   escaped_filename=${escaped_filename//|/\\|}
   escaped_filename=${escaped_filename//$'\n'/\\$'\n'}
 
-  if [ "$no_lines" -eq 1 ]; then
-    if [ "$no_files" -eq 1 ]; then
-      [ "$num_files" -ne 1 ] && sed -n "$start_line,${end_line}p" "$filename" && continue
-    else
-      [ "$num_files" -ne 1 ] && sed -n "$start_line,${end_line}p" "$filename" | sed "s|^|${COLOR_FILENAME}${escaped_filename}${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}|" && continue
-    fi
-    sed -n "$start_line,${end_line}p" "$filename"
-  else
-    if [ "$no_files" -eq 1 ]; then
-      [ "$num_files" -ne 1 ] && sed "$start_line,$end_line"'!d;=' "$filename" | sed "N;s/^\(.*\)\n\(.*\)/${COLOR_LINE}\1${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}\2/" && continue
-    else
-      [ "$num_files" -ne 1 ] && sed "$start_line,$end_line"'!d;=' "$filename" | sed "N;s|^\(.*\)\n\(.*\)|${COLOR_FILENAME}${escaped_filename}${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}${COLOR_LINE}\1${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}\2|" && continue
-    fi
+  prefix=""
+  if [ "$num_files" -gt 1 ] && [ "$no_files" -eq 0 ]; then
+    prefix="${COLOR_FILENAME}${escaped_filename}${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}"
+  fi
 
-    sed "$start_line,$end_line"'!d;=' "$filename" | sed "N;s/^\(.*\)\n\(.*\)/${COLOR_LINE}\1${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}\2/"
+  if [ "$no_lines" -eq 1 ]; then
+    sed -n "$start_line,${end_line}{s|^|${prefix}|;p;}" "$filename" || status=1
+  else
+    sed "$start_line,$end_line"'!d;=' "$filename" |
+      sed "N;s|^\(.*\)\n\(.*\)|${prefix}${COLOR_LINE}\1${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}\2|" || status=1
   fi
 done
+exit "$status"
