@@ -6,10 +6,16 @@ test_dir=$(mktemp -d)
 trap 'rm -rf "$test_dir"' EXIT
 cd "$test_dir"
 
+fail() {
+  printf 'FAIL: %s\n' "$*" >&2
+  exit 1
+}
+
 expect() {
-  local expected=$1 actual
+  local expected=${1:+$1$'\n'} actual
   shift
-  actual=$("$body" --color=never "$@")
+  actual=$("$body" --color=never "$@" && echo .) || fail "$*: exit status $?"
+  actual=${actual%.}
   if [ "$actual" != "$expected" ]; then
     printf 'FAIL: %s\nExpected: %q\nActual:   %q\n' "$*" "$expected" "$actual" >&2
     exit 1
@@ -24,7 +30,7 @@ for name in "$test_dir/absolute" 'a&b' 'a|b' 'a\b' $'a\nb' 'x|;e touch injected;
   expect "$name:2:two"$'\nfile:2:two' "$name" file
   expect "$name:two"$'\nfile:two' -n "$name" file
 done
-[ ! -e injected ]
+[ ! -e injected ] || fail 'a filename ran as a sed command'
 
 # Use the unique middle for odd counts and the lower middle for even counts.
 printf 'one\ntwo\nthree\nfour\nfive\n' > odd
@@ -58,13 +64,13 @@ expect_failure() {
     printf 'Expected failure: %s\n' "$*" >&2
     exit 1
   fi
-  [ -s error ]
+  [ -s error ] || fail "$*: no error message"
 }
 
 # An error must survive later successes and empty files.
 expect_failure missing
 expect_failure missing file
-[ "$(cat actual)" = 'file:2:two' ]
+[ "$(cat actual)" = 'file:2:two' ] || fail "missing file: printed $(cat actual)"
 expect_failure file missing
 expect_failure missing empty
 cp file unreadable
