@@ -86,3 +86,16 @@ SH
 chmod +x bin/sed
 REAL_SED=$(command -v sed) PATH="$test_dir/bin:$PATH" expect_failure file
 PATH="$test_dir/bin:$PATH" expect_failure -n file
+
+# Leading zeros are decimal in every context option and argument form.
+printf '%s\n' {1..30} > many
+expect "$(printf '%s\n' {15..25})" -n -A010 many
+expect "$(printf '%s\n' {15..23})" -n -A=08 many
+expect "$(printf '%s\n' {7..15})" -n -B 08 many
+expect "$(printf '%s\n' {7..23})" -n -C0008 many
+expect '15' -n -C000 many
+for option in -A -B -C; do
+  expect_failure "$option"
+  expect_failure "${option}-1" many
+  expect_failure "${option}1.5" many
+done

@@ -65,44 +65,27 @@ while [ "$#" -gt 0 ]; do
         exit 1
       fi
       ;;
-    -A*)
-      lines_after="${1#-A}"
-      lines_after="${lines_after#=}"
-      if [ -z "$lines_after" ] && [ -n "$2" ]; then
-        lines_after="$2"
+    -A*|-B*|-C*)
+      option=${1:0:2}
+      context=${1:2}
+      context=${context#=}
+      if [ -z "$context" ] && [ -n "$2" ]; then
+        context=$2
         shift
       fi
 
-      if ! is_uint "$lines_after"; then
-        echo "body: $lines_after: invalid context length argument" >&2
+      if ! is_uint "$context"; then
+        echo "body: $context: invalid context length argument" >&2
         exit 1
       fi
-      ;;
-    -B*)
-      lines_before="${1#-B}"
-      lines_before="${lines_before#=}"
-      if [ -z "$lines_before" ] && [ -n "$2" ]; then
-        lines_before="$2"
-        shift
-      fi
-      if ! is_uint "$lines_before"; then
-        echo "body: $lines_before: invalid context length argument" >&2
-        exit 1
-      fi
-
-      ;;
-    -C*)
-      lines_before="${1#-C}"
-      lines_before="${lines_before#=}"
-      if [ -z "$lines_before" ] && [ -n "$2" ]; then
-        lines_before="$2"
-        shift
-      fi
-      lines_after="$lines_before"
-      if ! is_uint "$lines_after"; then
-        echo "body: $lines_after: invalid context length argument" >&2
-        exit 1
-      fi
+      # Strip leading zeros so Bash arithmetic treats the count as decimal.
+      context=${context#"${context%%[!0]*}"}
+      context=${context:-0}
+      case $option in
+        -A) lines_after=$context;;
+        -B) lines_before=$context;;
+        -C) lines_before=$context; lines_after=$context;;
+      esac
       ;;
     -n)
       no_lines=1
