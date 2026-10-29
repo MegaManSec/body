@@ -25,3 +25,11 @@ for name in "$test_dir/absolute" 'a&b' 'a|b' 'a\b' $'a\nb' 'x|;e touch injected;
   expect "$name:two"$'\nfile:two' -n "$name" file
 done
 [ ! -e injected ]
+
+# Use the unique middle for odd counts and the lower middle for even counts.
+printf 'one\ntwo\nthree\nfour\nfive\n' > odd
+printf 'one\n' > single
+expect '3:three' odd
+expect $'2:two\n3:three\n4:four' -C1 odd
+expect '2:two' file
+expect '1:one' single

@@ -157,7 +157,7 @@ for filename in "${filenames[@]}"; do
     continue
   fi
 
-  middle_line=$((line_count / 2)) # XXX: Rounds down
+  middle_line=$(((line_count + 1) / 2))
 
   start_line=$((middle_line - lines_before))
   end_line=$((middle_line + lines_after))
