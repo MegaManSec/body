@@ -37,9 +37,11 @@ expect '1:one' single
 # Count a final record even when it has no newline.
 printf 'one' > partial_single
 printf 'one\ntwo\nthree\nfour\nfive' > partial
+printf 'one\ntwo\nthree\0' > partial_nul
 : > empty
 expect '1:one' partial_single
 expect '3:three' partial
+expect '2:two' partial_nul
 expect $'1:one\n2:two\n3:three\n4:four\n5:five' -C10 partial
 expect $'one\ntwo\nthree\nfour\nfive' -n -C10 partial
 expect '' empty
@@ -67,14 +69,16 @@ chmod 600 unreadable
 
 # Detect counting failures and failures in the first stage of a pipeline.
 mkdir bin
-cat > bin/awk <<'SH'
+for command in wc tail; do
+  cat > "bin/$command" <<'SH'
 #!/bin/sh
 echo 'forced counting failure' >&2
 exit 1
 SH
-chmod +x bin/awk
-PATH="$test_dir/bin:$PATH" expect_failure file
-rm bin/awk
+  chmod +x "bin/$command"
+  PATH="$test_dir/bin:$PATH" expect_failure file
+  rm "bin/$command"
+done
 cat > bin/sed <<'SH'
 #!/bin/sh
 case $1 in

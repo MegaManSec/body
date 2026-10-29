@@ -140,10 +140,12 @@ for filename in "${filenames[@]}"; do
     continue
   fi
 
-  if ! line_count=$(awk 'END { print NR }' < "$filename"); then
+  if ! line_count=$(wc -l < "$filename") ||
+    ! unterminated=$(tail -c1 "$filename" | tr -d '\n' | wc -c); then
     status=1
     continue
   fi
+  line_count=$((line_count + unterminated))
 
   if [ "$line_count" -lt 1 ]; then
 #    echo "File is empty: $filename" >&2
