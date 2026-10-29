@@ -33,3 +33,13 @@ expect '3:three' odd
 expect $'2:two\n3:three\n4:four' -C1 odd
 expect '2:two' file
 expect '1:one' single
+
+# Count a final record even when it has no newline.
+printf 'one' > partial_single
+printf 'one\ntwo\nthree\nfour\nfive' > partial
+: > empty
+expect '1:one' partial_single
+expect '3:three' partial
+expect $'1:one\n2:two\n3:three\n4:four\n5:five' -C10 partial
+expect $'one\ntwo\nthree\nfour\nfive' -n -C10 partial
+expect '' empty
