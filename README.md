@@ -113,8 +113,11 @@ previously, the script used:
 awk 'NR>='"$start_line"' && NR<='"$end_line"' {print NR ":" $0}' "$filename" 2>/dev/null
 ```
 
-now it uss:
+now it uses:
 
 ```bash
-sed "$start_line,$end_line"'!d;=' "$filename" | sed 'N;s/\n/:/' | sed "s|^|$filename:|"
+sed "$start_line,$end_line"'!d;=' "$filename" |
+  sed "N;s|^\(.*\)\n\(.*\)|${prefix}${COLOR_LINE}\1${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}\2|"
 ```
+
+where `prefix` is empty for a single file or with `-N`, and otherwise the file name, escaped for the sed replacement, followed by `:`.
