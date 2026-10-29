@@ -165,18 +165,24 @@ for filename in "${filenames[@]}"; do
   [ "$start_line" -le 0 ] && start_line=1
   [ "$end_line" -gt $line_count ] && end_line=$line_count
 
+  # Escape filenames used as literal sed replacement text.
+  escaped_filename=${filename//\\/\\\\}
+  escaped_filename=${escaped_filename//&/\\&}
+  escaped_filename=${escaped_filename//|/\\|}
+  escaped_filename=${escaped_filename//$'\n'/\\$'\n'}
+
   if [ "$no_lines" -eq 1 ]; then
     if [ "$no_files" -eq 1 ]; then
       [ "$num_files" -ne 1 ] && sed -n "$start_line,${end_line}p" "$filename" && continue
     else
-      [ "$num_files" -ne 1 ] && sed -n "$start_line,${end_line}p" "$filename" | sed "s|^|${COLOR_FILENAME}${filename}${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}|" && continue
+      [ "$num_files" -ne 1 ] && sed -n "$start_line,${end_line}p" "$filename" | sed "s|^|${COLOR_FILENAME}${escaped_filename}${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}|" && continue
     fi
     sed -n "$start_line,${end_line}p" "$filename"
   else
     if [ "$no_files" -eq 1 ]; then
       [ "$num_files" -ne 1 ] && sed "$start_line,$end_line"'!d;=' "$filename" | sed "N;s/^\(.*\)\n\(.*\)/${COLOR_LINE}\1${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}\2/" && continue
     else
-      [ "$num_files" -ne 1 ] && sed "$start_line,$end_line"'!d;=' "$filename" | sed "N;s/^\(.*\)\n\(.*\)/${COLOR_FILENAME}${filename}${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}${COLOR_LINE}\1${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}\2/" && continue
+      [ "$num_files" -ne 1 ] && sed "$start_line,$end_line"'!d;=' "$filename" | sed "N;s|^\(.*\)\n\(.*\)|${COLOR_FILENAME}${escaped_filename}${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}${COLOR_LINE}\1${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}\2|" && continue
     fi
 
     sed "$start_line,$end_line"'!d;=' "$filename" | sed "N;s/^\(.*\)\n\(.*\)/${COLOR_LINE}\1${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}\2/"
