@@ -46,6 +46,13 @@ expect $'1:one\n2:two\n3:three\n4:four\n5:five' -C10 partial
 expect $'one\ntwo\nthree\nfour\nfive' -n -C10 partial
 expect '' empty
 
+# End every printed line with a newline, including an unterminated final line.
+expect $'partial_single:1:one\nfile:2:two' partial_single file
+expect $'partial_single:one\nfile:two' -n partial_single file
+expect $'1:one\n2:two' -N partial_single file
+expect $'partial:3:three\nfile:2:two' partial file
+expect $'partial:3:three\npartial:4:four\npartial:5:five\nfile:2:two\nfile:3:three\nfile:4:four' -A2 partial file
+
 expect_failure() {
   if "$body" "$@" > actual 2> error; then
     printf 'Expected failure: %s\n' "$*" >&2

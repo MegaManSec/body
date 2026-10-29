@@ -180,5 +180,9 @@ for filename in "${filenames[@]}"; do
     sed "$start_line,$end_line"'!d;=' "$filename" |
       sed "N;s|^\(.*\)\n\(.*\)|${prefix}${COLOR_LINE}\1${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}\2|" || status=1
   fi
+
+  if [ "$unterminated" -eq 1 ] && [ "$end_line" -eq "$line_count" ]; then
+    echo
+  fi
 done
 exit "$status"
