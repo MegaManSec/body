@@ -99,3 +99,12 @@ for option in -A -B -C; do
   expect_failure "${option}-1" many
   expect_failure "${option}1.5" many
 done
+
+# Clamp valid large requests before arithmetic; reject unrepresentable values.
+expect "$(printf '%s\n' {15..30})" -n -A9223372036854775807 many
+expect "$(printf '%s\n' {1..15})" -n -B9223372036854775807 many
+expect "$(printf '%s\n' {1..30})" -n -C9223372036854775807 many
+for option in -A -B -C; do
+  expect_failure "${option}9223372036854775808" many
+  expect_failure "${option}18446744073709551616" many
+done

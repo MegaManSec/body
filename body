@@ -81,6 +81,10 @@ while [ "$#" -gt 0 ]; do
       # Strip leading zeros so Bash arithmetic treats the count as decimal.
       context=${context#"${context%%[!0]*}"}
       context=${context:-0}
+      if ! printf -v parsed_context '%d' "$context" 2>/dev/null || [ "$parsed_context" != "$context" ]; then
+        echo "body: $context: context length argument out of range" >&2
+        exit 1
+      fi
       case $option in
         -A) lines_after=$context;;
         -B) lines_before=$context;;
@@ -148,11 +152,14 @@ for filename in "${filenames[@]}"; do
 
   middle_line=$(((line_count + 1) / 2))
 
-  start_line=$((middle_line - lines_before))
-  end_line=$((middle_line + lines_after))
-
-  [ "$start_line" -le 0 ] && start_line=1
-  [ "$end_line" -gt "$line_count" ] && end_line=$line_count
+  start_line=1
+  end_line=$line_count
+  if [ "$lines_before" -lt "$middle_line" ]; then
+    start_line=$((middle_line - lines_before))
+  fi
+  if [ "$lines_after" -lt "$((line_count - middle_line))" ]; then
+    end_line=$((middle_line + lines_after))
+  fi
 
   # Escape filenames used as literal sed replacement text.
   escaped_filename=${filename//\\/\\\\}
