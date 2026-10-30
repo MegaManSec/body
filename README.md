@@ -65,7 +65,7 @@ benchmark_command() {
   done
   local end_time=$(date +%s.%N)
   local elapsed_time=$(echo "$end_time - $start_time" | bc -l)
-  local average_time=$(echo "$elapsed_time / 10" | bc -l)
+  local average_time=$(echo "$elapsed_time / 20" | bc -l)
   printf "%.6f " "$average_time"
 }
 echo 3 > /proc/sys/vm/drop_caches
@@ -83,7 +83,7 @@ benchmark_command "lines=\$(wc -l < $file); lines=\$((lines/2)); cat -n $file | 
 echo
 ```
 
-executed 20 times, the results come out as:
+Historical results from 20 runs (not rerun after correcting the divisor above):
 
 ```bash
  for i in {1..20}; do bash /tmp/test; done  | awk '{
@@ -113,8 +113,11 @@ previously, the script used:
 awk 'NR>='"$start_line"' && NR<='"$end_line"' {print NR ":" $0}' "$filename" 2>/dev/null
 ```
 
-now it uss:
+now it uses:
 
 ```bash
-sed "$start_line,$end_line"'!d;=' "$filename" | sed 'N;s/\n/:/' | sed "s|^|$filename:|"
+sed "$start_line,$end_line"'!d;=' "$filename" |
+  sed "N;s|^\(.*\)\n\(.*\)|${prefix}${COLOR_LINE}\1${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}\2|"
 ```
+
+where `prefix` is empty for a single file or with `-N`, and otherwise the file name, escaped for the sed replacement, followed by `:`.

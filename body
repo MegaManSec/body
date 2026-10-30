@@ -2,6 +2,7 @@
 #declare -A filenames
 
 export LC_ALL=C
+set -o pipefail
 
 is_uint() {
   case $1 in
@@ -64,44 +65,31 @@ while [ "$#" -gt 0 ]; do
         exit 1
       fi
       ;;
-    -A*)
-      lines_after="${1#-A}"
-      lines_after="${lines_after#=}"
-      if [ -z "$lines_after" ] && [ -n "$2" ]; then
-        lines_after="$2"
+    -A*|-B*|-C*)
+      option=${1:0:2}
+      context=${1:2}
+      context=${context#=}
+      if [ -z "$context" ] && [ -n "$2" ]; then
+        context=$2
         shift
       fi
 
-      if ! is_uint "$lines_after"; then
-        echo "body: $lines_after: invalid context length argument" >&2
+      if ! is_uint "$context"; then
+        echo "body: $context: invalid context length argument" >&2
         exit 1
       fi
-      ;;
-    -B*)
-      lines_before="${1#-B}"
-      lines_before="${lines_before#=}"
-      if [ -z "$lines_before" ] && [ -n "$2" ]; then
-        lines_before="$2"
-        shift
-      fi
-      if ! is_uint "$lines_before"; then
-        echo "body: $lines_before: invalid context length argument" >&2
+      # Strip leading zeros so Bash arithmetic treats the count as decimal.
+      context=${context#"${context%%[!0]*}"}
+      context=${context:-0}
+      if ! printf -v parsed_context '%d' "$context" 2>/dev/null || [ "$parsed_context" != "$context" ]; then
+        echo "body: $context: context length argument out of range" >&2
         exit 1
       fi
-
-      ;;
-    -C*)
-      lines_before="${1#-C}"
-      lines_before="${lines_before#=}"
-      if [ -z "$lines_before" ] && [ -n "$2" ]; then
-        lines_before="$2"
-        shift
-      fi
-      lines_after="$lines_before"
-      if ! is_uint "$lines_after"; then
-        echo "body: $lines_after: invalid context length argument" >&2
-        exit 1
-      fi
+      case $option in
+        -A) lines_after=$context;;
+        -B) lines_before=$context;;
+        -C) lines_before=$context; lines_after=$context;;
+      esac
       ;;
     -n)
       no_lines=1
@@ -144,41 +132,57 @@ if [ "$num_files" -eq 0 ]; then
   exit 1
 fi
 
+status=0
 for filename in "${filenames[@]}"; do
   if ! [ -f "$filename" ] || ! [ -r "$filename" ]; then
     echo "body: $filename: No such file" >&2
+    status=1
     continue
   fi
 
-  line_count=$(wc -l < "$filename" 2>/dev/null)
+  if ! line_count=$(wc -l < "$filename") ||
+    ! unterminated=$(tail -c1 < "$filename" | tr -d '\n' | wc -c); then
+    status=1
+    continue
+  fi
+  line_count=$((line_count + unterminated))
 
   if [ "$line_count" -lt 1 ]; then
 #    echo "File is empty: $filename" >&2
     continue
   fi
 
-  middle_line=$((line_count / 2)) # XXX: Rounds down
+  middle_line=$(((line_count + 1) / 2))
 
-  start_line=$((middle_line - lines_before))
-  end_line=$((middle_line + lines_after))
+  start_line=1
+  end_line=$line_count
+  if [ "$lines_before" -lt "$middle_line" ]; then
+    start_line=$((middle_line - lines_before))
+  fi
+  if [ "$lines_after" -lt "$((line_count - middle_line))" ]; then
+    end_line=$((middle_line + lines_after))
+  fi
 
-  [ "$start_line" -le 0 ] && start_line=1
-  [ "$end_line" -gt $line_count ] && end_line=$line_count
+  # Escape filenames used as literal sed replacement text.
+  escaped_filename=${filename//\\/\\\\}
+  escaped_filename=${escaped_filename//&/\\&}
+  escaped_filename=${escaped_filename//|/\\|}
+  escaped_filename=${escaped_filename//$'\n'/\\$'\n'}
+
+  prefix=""
+  if [ "$num_files" -gt 1 ] && [ "$no_files" -eq 0 ]; then
+    prefix="${COLOR_FILENAME}${escaped_filename}${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}"
+  fi
 
   if [ "$no_lines" -eq 1 ]; then
-    if [ "$no_files" -eq 1 ]; then
-      [ "$num_files" -ne 1 ] && sed -n "$start_line,${end_line}p" "$filename" && continue
-    else
-      [ "$num_files" -ne 1 ] && sed -n "$start_line,${end_line}p" "$filename" | sed "s|^|${COLOR_FILENAME}${filename}${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}|" && continue
-    fi
-    sed -n "$start_line,${end_line}p" "$filename"
+    sed -n "$start_line,${end_line}{s|^|${prefix}|;p;}" "$filename" || status=1
   else
-    if [ "$no_files" -eq 1 ]; then
-      [ "$num_files" -ne 1 ] && sed "$start_line,$end_line"'!d;=' "$filename" | sed "N;s/^\(.*\)\n\(.*\)/${COLOR_LINE}\1${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}\2/" && continue
-    else
-      [ "$num_files" -ne 1 ] && sed "$start_line,$end_line"'!d;=' "$filename" | sed "N;s/^\(.*\)\n\(.*\)/${COLOR_FILENAME}${filename}${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}${COLOR_LINE}\1${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}\2/" && continue
-    fi
+    sed "$start_line,$end_line"'!d;=' "$filename" |
+      sed "N;s|^\(.*\)\n\(.*\)|${prefix}${COLOR_LINE}\1${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}\2|" || status=1
+  fi
 
-    sed "$start_line,$end_line"'!d;=' "$filename" | sed "N;s/^\(.*\)\n\(.*\)/${COLOR_LINE}\1${COLOR_RESET}${COLOR_SEP}:${COLOR_RESET}\2/"
+  if [ "$unterminated" -eq 1 ] && [ "$end_line" -eq "$line_count" ]; then
+    echo
   fi
 done
+exit "$status"
