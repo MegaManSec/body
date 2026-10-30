@@ -25,7 +25,7 @@ expect() {
 printf 'one\ntwo\nthree\nfour\n' > file
 
 # Filenames must remain literal in both output modes.
-for name in "$test_dir/absolute" 'a&b' 'a|b' 'a\b' $'a\nb' 'x|;e touch injected;#'; do
+for name in "$test_dir/absolute" '+5' 'a&b' 'a|b' 'a\b' $'a\nb' 'x|;e touch injected;#'; do
   cp file "$name"
   expect "$name:2:two"$'\nfile:2:two' "$name" file
   expect "$name:two"$'\nfile:two' -n "$name" file

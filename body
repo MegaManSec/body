@@ -141,7 +141,7 @@ for filename in "${filenames[@]}"; do
   fi
 
   if ! line_count=$(wc -l < "$filename") ||
-    ! unterminated=$(tail -c1 "$filename" | tr -d '\n' | wc -c); then
+    ! unterminated=$(tail -c1 < "$filename" | tr -d '\n' | wc -c); then
     status=1
     continue
   fi
